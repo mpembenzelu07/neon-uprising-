@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEON UPRISING — Open World</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #05070d; color: #e6f7ff; font-family: 'Rajdhani', sans-serif; }
+    .font-display { font-family: 'Orbitron', sans-serif; }
+    #scene-canvas { display: block; position: absolute; inset: 0; }
+    .neon-cyan { color: #00f0ff; text-shadow: 0 0 20px #00f0ff88; }
+    .neon-pink { color: #ff00a0; text-shadow: 0 0 20px #ff00a088; }
+    .glass { background: rgba(10, 20, 35, 0.65); backdrop-filter: blur(12px); border: 1px solid rgba(0, 240, 255, 0.25); }
+    .char-card { transition: all .3s ease; cursor: pointer; }
+    .char-card:hover, .char-card.selected { transform: translateY(-6px); border-color: #00f0ff; box-shadow: 0 0 40px #00f0ff55; }
+    .grid-bg { background-image: linear-gradient(rgba(0,240,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,240,255,0.06) 1px, transparent 1px); background-size: 40px 40px; }
+    .fade { transition: opacity .5s ease; }
+    .hidden { display: none !important; }
+    .glow-btn { transition: all .2s ease; }
+    .glow-btn:hover:not(:disabled) { box-shadow: 0 0 25px #00f0ff88; transform: scale(1.02); }
+  </style>
+</head>
+<body>
+  <!-- Loading -->
+  <div id="loading" class="fixed inset-0 z-50 flex items-center justify-center bg-black">
+    <div class="text-center">
+      <div class="font-display text-3xl md:text-5xl neon-cyan animate-pulse tracking-widest">NEON UPRISING</div>
+      <div class="mt-4 text-cyan-300 tracking-widest text-sm">INITIALIZING WORLD...</div>
+    </div>
+  </div>
+
+  <!-- Character Select -->
+  <div id="character-select" class="fixed inset-0 z-40 hidden items-center justify-center grid-bg p-4 overflow-y-auto">
+    <div class="max-w-6xl w-full py-8">
+      <div class="text-center mb-10">
+        <h1 class="font-display text-4xl md:text-6xl font-black neon-cyan tracking-widest">NEON UPRISING</h1>
+        <p class="mt-2 text-cyan-300 tracking-[0.5em] text-xs md:text-sm">CHOOSE YOUR OPERATIVE</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="char-grid"></div>
+      <div class="text-center mt-10">
+        <button id="confirm-char" disabled class="glow-btn font-display text-xl px-12 py-4 bg-cyan-500/20 border-2 border-cyan-400 text-cyan-300 tracking-widest disabled:opacity-30 disabled:cursor-not-allowed">
+          ENTER THE CITY
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game -->
+  <div id="game" class="fixed inset-0 z-10 hidden">
+    <canvas id="scene-canvas"></canvas>
+
+    <!-- Top HUD -->
+    <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-start pointer-events-none z-20">
+      <div class="glass rounded-lg px-5 py-3 pointer-events-auto">
+        <div class="text-[10px] text-cyan-400 tracking-widest">OPERATIVE</div>
+        <div id="hud-char" class="font-display text-base neon-cyan">—</div>
+      </div>
+      <div class="glass rounded-lg px-5 py-3 pointer-events-auto text-right">
+        <div class="text-[10px] text-cyan-400 tracking-widest">CREDS</div>
+        <div id="hud-money" class="text-2xl neon-pink">1,000</div>
+      </div>
+    </div>
+
+    <!-- Bottom HUD -->
+    <div class="absolute bottom-0 left-0 right-0 p-4 flex justify-between items-end pointer-events-none z-20">
+      <div class="glass rounded-lg px-4 py-2 pointer-events-auto hidden md:block">
+        <div class="text-[10px] text-cyan-400 tracking-widest mb-1">CONTROLS</div>
+        <div class="text-xs text-cyan-200">WASD — Move • Shift — Sprint • E — Interact</div>
+      </div>
+      <div class="flex gap-2 pointer-events-auto ml-auto">
+        <button id="btn-kimi" class="glass rounded-lg px-4 py-2 text-cyan-300 hover:bg-cyan-500/20 transition text-sm">🤖 KIMI</button>
+        <button id="btn-wallet" class="glass rounded-lg px-4 py-2 text-cyan-300 hover:bg-cyan-500/20 transition text-sm">💳 WALLET</button>
+      </div>
+    </div>
+
+    <!-- Prompt -->
+    <div id="prompt" class="absolute bottom-28 left-1/2 -translate-x-1/2 glass rounded-lg px-6 py-3 hidden z-20">
+      <span class="text-cyan-300 text-sm">Press <span class="font-display neon-cyan">E</span> — <span id="prompt-text">Interact</span></span>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notifications" class="absolute top-24 left-1/2 -translate-x-1/2 flex flex-col gap-2 items-center pointer-events-none z-30"></div>
+
+    <!-- Kimi panel -->
+    <div id="kimi-panel" class="absolute top-20 right-4 w-80 glass rounded-xl p-4 hidden z-30">
+      <div class="flex justify-between items-center mb-3">
+        <div class="font-display text-cyan-300 text-sm">KIMI — AI ASSISTANT</div>
+        <button id="close-kimi" class="text-cyan-400 hover:text-white">✕</button>
+      </div>
+      <div id="kimi-messages" class="h-56 overflow-y-auto text-sm text-cyan-100 space-y-2 mb-3 pr-1"></div>
+      <div class="flex gap-2">
+        <input id="kimi-input" placeholder="Ask anything..." class="flex-1 bg-black/40 border border-cyan-500/30 rounded px-3 py-2 text-sm text-cyan-100 focus:outline-none focus:border-cyan-400" />
+        <button id="kimi-send" class="bg-cyan-500/20 border border-cyan-400 px-3 rounded hover:bg-cyan-500/40 text-cyan-200">→</button>
+      </div>
+    </div>
+
+    <!-- Wallet panel -->
+    <div id="wallet-panel" class="absolute top-20 right-4 w-80 glass rounded-xl p-4 hidden z-30">
+      <div class="flex justify-between items-center mb-3">
+        <div class="font-display text-cyan-300 text-sm">WALLET</div>
+        <button id="close-wallet" class="text-cyan-400 hover:text-white">✕</button>
+      </div>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between"><span class="text-cyan-400">Creds:</span><span id="wallet-creds" class="neon-pink font-display">1,000</span></div>
+        <div class="flex justify-between"><span class="text-cyan-400">Transactions:</span><span id="wallet-tx">0</span></div>
+        <hr class="border-cyan-500/20" />
+        <div class="text-[10px] text-cyan-400 mb-1 tracking-widest">WITHDRAWAL (SIMULATED)</div>
+        <input id="withdraw-amount" type="number" placeholder="Amount" class="w-full bg-black/40 border border-cyan-500/30 rounded px-3 py-2 text-sm text-cyan-100 focus:outline-none" />
+        <button id="withdraw-btn" class="w-full glow-btn bg-cyan-500/20 border border-cyan-400 py-2 rounded text-cyan-200">Request Withdrawal</button>
+        <div id="wallet-log" class="text-xs text-cyan-500 mt-2 max-h-24 overflow-y-auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
