@@ -1,4 +1,12 @@
-const KIMI_ENDPOINT = import.meta.env.VITE_KIMI_ENDPOINT || '/api/kimi';
+// Safe fallback for when Vite is not building the project
+let KIMI_ENDPOINT = '/api/kimi';
+try {
+  if (import.meta.env && import.meta.env.VITE_KIMI_ENDPOINT) {
+    KIMI_ENDPOINT = import.meta.env.VITE_KIMI_ENDPOINT;
+  }
+} catch (e) {
+  // Ignore errors in standard browsers where import.meta.env doesn't exist
+}
 
 const LOCAL_TIPS = {
   money: 'Complete transport missions for steady income. Deliveries pay 500-800 Creds each.',
@@ -22,7 +30,7 @@ export async function askKimi(question, playerState) {
     const data = await res.json();
     if (data.reply) return data.reply;
   } catch {
-    // Fall through to local tips
+    // Fall through to local tips if the API is not set up
   }
   return getLocalResponse(question);
 }
