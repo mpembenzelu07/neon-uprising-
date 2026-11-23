@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>NEON UPRISING — Open World</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- IMPORT MAP: This allows the game to load Three.js directly from the web -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
     html, body { margin: 0; padding: 0; overflow: hidden; background: #05070d; color: #e6f7ff; font-family: 'Rajdhani', sans-serif; touch-action: none; }
@@ -160,6 +170,7 @@
     </div>
   </div>
 
-  <script type="module" src="/src/main.js"></script>
+  <!-- Note the ./ before src/main.js -->
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
