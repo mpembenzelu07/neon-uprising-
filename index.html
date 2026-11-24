@@ -4,103 +4,134 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>NEON UPRISING</title>
-  
-  <!-- Load Tailwind for styling -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Load Three.js for 3D -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap');
-    body { margin: 0; overflow: hidden; background: #05070d; color: white; font-family: 'Rajdhani', sans-serif; }
+    body { margin: 0; overflow: hidden; background: #05070d; color: white; font-family: 'Rajdhani', sans-serif; touch-action: none; }
     .font-display { font-family: 'Orbitron', sans-serif; }
     canvas { display: block; }
     .glass { background: rgba(10, 20, 35, 0.85); border: 1px solid rgba(0, 240, 255, 0.3); }
     .neon-cyan { color: #00f0ff; text-shadow: 0 0 10px #00f0ff; }
     .neon-pink { color: #ff00a0; text-shadow: 0 0 10px #ff00a0; }
     .hidden { display: none !important; }
+    
+    /* Mobile Controls */
+    .d-pad-btn {
+      width: 50px; height: 50px; background: rgba(0, 240, 255, 0.2); 
+      border: 2px solid #00f0ff; border-radius: 8px; display: flex; 
+      align-items: center; justify-content: center; user-select: none;
+    }
+    .d-pad-btn:active { background: rgba(0, 240, 255, 0.6); }
   </style>
 </head>
 <body>
 
-  <!-- LOADING SCREEN -->
-  <div id="loading" class="fixed inset-0 flex items-center justify-center bg-black z-50">
-    <div class="text-center">
-      <h1 class="font-display text-4xl neon-cyan tracking-widest animate-pulse">NEON UPRISING</h1>
-      <p class="mt-4 text-cyan-300">INITIALIZING WORLD...</p>
-    </div>
+  <!-- LOADING -->
+  <div id="loading" class="fixed inset-0 flex flex-col items-center justify-center bg-black z-50">
+    <h1 class="font-display text-4xl neon-cyan tracking-widest animate-pulse">NEON UPRISING</h1>
+    <p class="mt-4 text-cyan-300">LOADING...</p>
   </div>
 
-  <!-- CHARACTER SELECTION -->
-  <div id="char-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-black/90 z-40 hidden">
-    <h1 class="font-display text-4xl neon-cyan mb-8 tracking-widest">CHOOSE YOUR OPERATIVE</h1>
-    <div id="char-container" class="flex gap-6 flex-wrap justify-center"></div>
+  <!-- CHARACTER SELECT -->
+  <div id="char-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-black/90 z-40 hidden p-4">
+    <h1 class="font-display text-3xl md:text-5xl neon-cyan mb-8 tracking-widest text-center">CHOOSE YOUR OPERATIVE</h1>
+    <div id="char-container" class="flex flex-col md:flex-row gap-4 w-full max-w-4xl justify-center"></div>
   </div>
 
   <!-- GAME UI -->
   <div id="game-ui" class="fixed inset-0 z-10 hidden pointer-events-none">
-    <div class="absolute top-4 left-4 glass p-4 rounded-xl pointer-events-auto">
+    <div class="absolute top-4 left-4 glass p-3 rounded-xl pointer-events-auto">
       <p class="text-cyan-400 text-xs tracking-widest">OPERATIVE</p>
-      <h2 id="ui-char" class="font-display text-xl neon-cyan">—</h2>
+      <h2 id="ui-char" class="font-display text-lg neon-cyan">—</h2>
     </div>
-    <div class="absolute top-4 right-4 glass p-4 rounded-xl text-right pointer-events-auto">
+    <div class="absolute top-4 right-4 glass p-3 rounded-xl text-right pointer-events-auto">
       <p class="text-cyan-400 text-xs tracking-widest">CREDS</p>
       <h2 id="ui-money" class="font-display text-2xl neon-pink">1,000</h2>
     </div>
-    <div class="absolute bottom-4 left-4 glass p-4 rounded-xl pointer-events-auto text-sm text-cyan-200">
-      WASD to move. Walk into the glowing cyan circle to earn money.
+    
+    <!-- Interaction Prompt -->
+    <div id="prompt" class="absolute top-1/3 left-1/2 -translate-x-1/2 glass px-6 py-2 rounded-lg hidden">
+      <span class="text-cyan-300">Press <span class="font-display neon-cyan">E</span> to complete mission</span>
+    </div>
+
+    <!-- Mobile D-Pad -->
+    <div class="absolute bottom-8 left-8 flex flex-col items-center gap-2 pointer-events-auto md:hidden">
+      <div class="d-pad-btn" id="btn-w">▲</div>
+      <div class="flex gap-2">
+        <div class="d-pad-btn" id="btn-a">◀</div>
+        <div class="d-pad-btn" id="btn-s">▼</div>
+        <div class="d-pad-btn" id="btn-d">▶</div>
+      </div>
+    </div>
+    <!-- Mobile Action Buttons -->
+    <div class="absolute bottom-8 right-8 flex flex-col gap-4 pointer-events-auto md:hidden">
+      <button id="btn-e" class="w-16 h-16 rounded-full bg-cyan-500/20 border-2 border-cyan-400 font-display text-cyan-300 text-xl active:bg-cyan-500/60">E</button>
+      <button id="btn-kimi" class="w-16 h-16 rounded-full bg-pink-500/20 border-2 border-pink-400 font-display text-pink-300 text-sm active:bg-pink-500/60">KIMI</button>
     </div>
   </div>
 
-  <!-- THE GAME SCRIPT -->
+  <!-- KIMI PANEL -->
+  <div id="kimi-panel" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm glass p-4 rounded-xl z-50 hidden">
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="font-display text-cyan-300">KIMI AI</h3>
+      <button id="close-kimi" class="text-white text-xl px-2">✕</button>
+    </div>
+    <div id="kimi-msg" class="text-sm text-cyan-100 h-24 overflow-y-auto mb-2 bg-black/40 p-2 rounded">
+      Hello! I am Kimi. Complete missions to earn Creds.
+    </div>
+  </div>
+
   <script>
-    // 1. Game State
-    let scene, camera, renderer, player;
+    // --- GAME STATE ---
+    let scene, camera, renderer, player, clock;
     let money = 1000;
     let selectedChar = null;
-    let keys = {};
+    let keys = { w: false, a: false, s: false, d: false };
     let missions = [];
-    let clock = new THREE.Clock();
+    let nearbyMission = null;
 
     const characters = [
-      { id: 'fixer', name: 'THE FIXER', color: '#ff3366', desc: 'Earns more from transport.' },
-      { id: 'ghost', name: 'THE GHOST', color: '#00f0ff', desc: 'Escapes police faster.' },
-      { id: 'netrunner', name: 'THE NETRUNNER', color: '#b44cff', desc: 'Unlocks hacking chores.' }
+      { id: 'fixer', name: 'THE FIXER', color: '#ff3366', desc: '+10% Transport Payout' },
+      { id: 'ghost', name: 'THE GHOST', color: '#00f0ff', desc: 'Faster Police Escape' },
+      { id: 'netrunner', name: 'THE NETRUNNER', color: '#b44cff', desc: 'Unlocks Hacking Jobs' }
     ];
 
-    // 2. UI Logic
-    setTimeout(() => {
-      document.getElementById('loading').classList.add('hidden');
-      document.getElementById('char-screen').classList.remove('hidden');
-      
+    // --- INITIALIZATION ---
+    window.onload = () => {
+      setTimeout(() => {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('char-screen').classList.remove('hidden');
+        buildCharacterCards();
+      }, 800);
+    };
+
+    function buildCharacterCards() {
       const container = document.getElementById('char-container');
       characters.forEach(char => {
         const card = document.createElement('div');
-        card.className = 'glass p-6 rounded-xl cursor-pointer hover:scale-105 transition-transform text-center w-64';
-        card.style.borderColor = char.color;
+        card.className = 'glass p-4 rounded-xl cursor-pointer hover:scale-105 transition-transform text-center w-full md:w-64';
         card.innerHTML = `
-          <div class="w-16 h-16 rounded-full mx-auto mb-4" style="background:${char.color}; box-shadow: 0 0 20px ${char.color};"></div>
-          <h3 class="font-display text-xl mb-2" style="color:${char.color};">${char.name}</h3>
-          <p class="text-sm text-gray-300">${char.desc}</p>
-          <button class="mt-4 w-full py-2 rounded bg-black/50 border border-cyan-500 text-cyan-300">SELECT</button>
+          <div class="w-12 h-12 rounded-full mx-auto mb-3" style="background:${char.color}; box-shadow: 0 0 20px ${char.color};"></div>
+          <h3 class="font-display text-lg mb-1" style="color:${char.color};">${char.name}</h3>
+          <p class="text-xs text-gray-300">${char.desc}</p>
         `;
         card.onclick = () => startGame(char);
         container.appendChild(card);
       });
-    }, 1000);
+    }
 
-    // 3. Start Game
+    // --- START GAME ---
     function startGame(char) {
       selectedChar = char;
       document.getElementById('char-screen').classList.add('hidden');
       document.getElementById('game-ui').classList.remove('hidden');
       document.getElementById('ui-char').innerText = char.name;
-      updateMoneyUI();
+      document.getElementById('ui-money').innerText = money;
 
-      // Setup Three.js
+      // 1. Setup Three.js
       scene = new THREE.Scene();
       scene.fog = new THREE.Fog(0x05070d, 20, 100);
-      
       camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
       
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -108,51 +139,100 @@
       renderer.setClearColor(0x05070d);
       document.body.appendChild(renderer.domElement);
 
-      // Lights
+      // 2. Lights
       scene.add(new THREE.AmbientLight(0xffffff, 0.4));
       const dirLight = new THREE.DirectionalLight(0x00f0ff, 1);
       dirLight.position.set(10, 20, 10);
       scene.add(dirLight);
 
-      // Ground
-      const groundGeo = new THREE.PlaneGeometry(200, 200);
-      const groundMat = new THREE.MeshStandardMaterial({ color: 0x0a1220 });
-      const ground = new THREE.Mesh(groundGeo, groundMat);
+      // 3. Ground & Grid
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(200, 200),
+        new THREE.MeshStandardMaterial({ color: 0x0a1220 })
+      );
       ground.rotation.x = -Math.PI / 2;
       scene.add(ground);
 
-      // Player
-      const playerGeo = new THREE.CylinderGeometry(0.5, 0.5, 2, 16);
-      const playerMat = new THREE.MeshStandardMaterial({ color: char.color, emissive: char.color, emissiveIntensity: 0.5 });
-      player = new THREE.Mesh(playerGeo, playerMat);
+      const grid = new THREE.GridHelper(200, 100, 0x00f0ff, 0x002233);
+      grid.position.y = 0.1;
+      scene.add(grid);
+
+      // 4. Player
+      player = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5, 0.5, 2, 16),
+        new THREE.MeshStandardMaterial({ color: char.color, emissive: char.color, emissiveIntensity: 0.5 })
+      );
       player.position.set(0, 1, 0);
       scene.add(player);
 
-      // Spawn Mission Markers
-      spawnMission(10, 0);
-      spawnMission(-15, 10);
+      // 5. Spawn Missions
+      spawnMission(10, 10);
+      spawnMission(-15, 5);
       spawnMission(0, -20);
 
-      // Event Listeners
-      window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-      window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+      // 6. Controls
+      setupControls();
+      clock = new THREE.Clock();
+      
+      // 7. Start Loop
+      animate();
+    }
+
+    // --- CONTROLS ---
+    function setupControls() {
+      // Keyboard
+      window.addEventListener('keydown', e => {
+        const k = e.key.toLowerCase();
+        if (keys.hasOwnProperty(k)) keys[k] = true;
+        if (k === 'e' && nearbyMission) collectMission(nearbyMission);
+      });
+      window.addEventListener('keyup', e => {
+        const k = e.key.toLowerCase();
+        if (keys.hasOwnProperty(k)) keys[k] = false;
+      });
+
+      // Mobile D-Pad
+      const bindTouch = (id, key) => {
+        const btn = document.getElementById(id);
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+        btn.addEventListener('mousedown', () => keys[key] = true);
+        btn.addEventListener('mouseup', () => keys[key] = false);
+      };
+      bindTouch('btn-w', 'w');
+      bindTouch('btn-a', 'a');
+      bindTouch('btn-s', 's');
+      bindTouch('btn-d', 'd');
+
+      // Mobile E Button
+      document.getElementById('btn-e').addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (nearbyMission) collectMission(nearbyMission);
+      });
+
+      // Kimi Panel
+      document.getElementById('btn-kimi').onclick = () => {
+        document.getElementById('kimi-panel').classList.remove('hidden');
+      };
+      document.getElementById('close-kimi').onclick = () => {
+        document.getElementById('kimi-panel').classList.add('hidden');
+      };
+
+      // Resize
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
       });
-
-      // Start Loop
-      animate();
     }
 
-    // 4. Game Logic
+    // --- MISSIONS ---
     function spawnMission(x, z) {
-      const geo = new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32);
-      const mat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.8 });
-      const marker = new THREE.Mesh(geo, mat);
+      const marker = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32),
+        new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.8 })
+      );
       marker.position.set(x, 0.1, z);
-      scene.add(marker);
       
       const beam = new THREE.Mesh(
         new THREE.CylinderGeometry(0.2, 0.2, 10, 8),
@@ -161,48 +241,61 @@
       beam.position.y = 5;
       marker.add(beam);
 
+      scene.add(marker);
       missions.push(marker);
     }
 
-    function updateMoneyUI() {
-      document.getElementById('ui-money').innerText = money.toLocaleString();
+    function collectMission(marker) {
+      money += 500;
+      document.getElementById('ui-money').innerText = money;
+      
+      scene.remove(marker);
+      missions = missions.filter(m => m !== marker);
+      nearbyMission = null;
+      document.getElementById('prompt').classList.add('hidden');
+
+      // Spawn a new one after a short delay
+      setTimeout(() => {
+        spawnMission((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40);
+      }, 2000);
     }
 
+    // --- GAME LOOP ---
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.1);
 
       if (player) {
         // Movement
-        const speed = keys['shift'] ? 20 : 10;
-        if (keys['w'] || keys['arrowup']) player.position.z -= speed * dt;
-        if (keys['s'] || keys['arrowdown']) player.position.z += speed * dt;
-        if (keys['a'] || keys['arrowleft']) player.position.x -= speed * dt;
-        if (keys['d'] || keys['arrowright']) player.position.x += speed * dt;
+        const speed = 15;
+        if (keys.w) player.position.z -= speed * dt;
+        if (keys.s) player.position.z += speed * dt;
+        if (keys.a) player.position.x -= speed * dt;
+        if (keys.d) player.position.x += speed * dt;
 
         // Camera Follow
         const targetCamPos = new THREE.Vector3(player.position.x, player.position.y + 8, player.position.z + 12);
         camera.position.lerp(targetCamPos, 0.1);
         camera.lookAt(player.position);
 
-        // Check Mission Collisions
-        for (let i = missions.length - 1; i >= 0; i--) {
-          const m = missions[i];
-          m.rotation.y += dt;
-          
+        // Check Mission Proximity
+        let closest = null;
+        let minDist = 4;
+
+        missions.forEach(m => {
+          m.rotation.y += dt * 2;
           const dist = player.position.distanceTo(m.position);
-          if (dist < 2) {
-            // Collect mission
-            money += 500;
-            updateMoneyUI();
-            scene.remove(m);
-            missions.splice(i, 1);
-            
-            // Spawn a new one elsewhere
-            setTimeout(() => {
-              spawnMission((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40);
-            }, 1000);
+          if (dist < minDist) {
+            minDist = dist;
+            closest = m;
           }
+        });
+
+        if (closest !== nearbyMission) {
+          nearbyMission = closest;
+          const prompt = document.getElementById('prompt');
+          if (nearbyMission) prompt.classList.remove('hidden');
+          else prompt.classList.add('hidden');
         }
       }
       renderer.render(scene, camera);
