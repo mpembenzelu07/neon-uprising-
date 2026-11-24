@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>NEON UPRISING: REALITY</title>
+  <title>NEON UPRISING: HIGH FIDELITY</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap');
     body { margin: 0; overflow: hidden; background: #05070d; color: white; font-family: 'Rajdhani', sans-serif; touch-action: none; }
     .font-display { font-family: 'Orbitron', sans-serif; }
     canvas { display: block; }
@@ -50,7 +50,7 @@
   <!-- LOADING -->
   <div id="loading" class="fixed inset-0 flex flex-col items-center justify-center bg-black z-50">
     <h1 class="font-display text-4xl neon-cyan tracking-widest animate-pulse">NEON UPRISING</h1>
-    <p class="mt-4 text-cyan-300">GENERATING WORLD MESH...</p>
+    <p class="mt-4 text-cyan-300 font-bold tracking-widest">GENERATING HIGH-FIDELITY MESHES...</p>
   </div>
 
   <!-- CHARACTER SELECT -->
@@ -87,12 +87,12 @@
     <div id="crosshair" class="hidden"></div>
 
     <!-- Interaction Prompt -->
-    <div id="prompt" class="absolute top-1/3 left-1/2 -translate-x-1/2 glass px-6 py-2 rounded-lg hidden border-cyan-400 border-2">
+    <div id="prompt" class="absolute top-1/3 left-1/2 -translate-x-1/2 glass px-6 py-2 rounded-lg hidden border-cyan-400 border-2 bg-black/80">
       <span class="text-cyan-300 font-bold tracking-widest text-sm" id="prompt-text">INTERACT</span>
     </div>
 
     <!-- Mobile D-Pad -->
-    <div class="absolute bottom-6 left-6 flex flex-col items-center gap-1 pointer-events-auto md:hidden">
+    <div class="absolute bottom-6 left-6 flex flex-col items-center gap-1 pointer-events-auto md:hidden z-30">
       <div class="d-pad-btn" id="btn-w">▲</div>
       <div class="flex gap-1">
         <div class="d-pad-btn" id="btn-a">◀</div>
@@ -102,7 +102,7 @@
     </div>
 
     <!-- Mobile Action Buttons -->
-    <div class="absolute bottom-6 right-6 flex flex-col gap-3 pointer-events-auto md:hidden items-end">
+    <div class="absolute bottom-6 right-6 flex flex-col gap-3 pointer-events-auto md:hidden items-end z-30">
       <div class="flex gap-3">
         <button id="btn-shop" class="action-btn bg-yellow-500/20 border-yellow-400 text-yellow-300">🛒</button>
         <button id="btn-kimi" class="action-btn bg-pink-500/20 border-pink-400 text-pink-300">🤖</button>
@@ -150,6 +150,7 @@
     let nearbyMission = null, nearbyCar = null;
     let isDriving = false;
     let lastShootTime = 0;
+    let walkTime = 0;
     
     // Weapons
     let weapons = [
@@ -202,105 +203,108 @@
       document.getElementById('ui-char').style.color = char.color;
       updateUI();
 
-      // 1. Setup Three.js
+      // 1. Setup Three.js (High Performance)
       scene = new THREE.Scene();
-      scene.fog = new THREE.FogExp2(0x05070d, 0.015); // Dense fog for atmosphere
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      scene.fog = new THREE.FogExp2(0x05070d, 0.01); 
+      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
       
       renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setClearColor(0x05070d);
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.body.appendChild(renderer.domElement);
 
-      // 2. Lighting
-      scene.add(new THREE.AmbientLight(0x111122, 1.5)); // Dark ambient
+      // 2. Lighting (More realistic)
+      scene.add(new THREE.AmbientLight(0x111122, 2)); 
       
-      const moonLight = new THREE.DirectionalLight(0x8899ff, 0.5);
-      moonLight.position.set(20, 50, -20);
-      moonLight.castShadow = true;
-      moonLight.shadow.mapSize.width = 1024;
-      moonLight.shadow.mapSize.height = 1024;
-      scene.add(moonLight);
+      const dirLight = new THREE.DirectionalLight(0x8899ff, 0.8);
+      dirLight.position.set(20, 50, -20);
+      dirLight.castShadow = true;
+      dirLight.shadow.camera.left = -50;
+      dirLight.shadow.camera.right = 50;
+      dirLight.shadow.camera.top = 50;
+      dirLight.shadow.camera.bottom = -50;
+      scene.add(dirLight);
 
-      // 3. Environment
+      // 3. World Environment
       buildCity();
       buildCar();
       buildPlayer();
 
-      // 4. Spawn Entities
+      // 4. Entities
       spawnMission(10, 10);
-      spawnMission(-20, 15);
+      spawnMission(-25, 15);
       spawnEnemy();
 
-      // 5. Controls & Loop
+      // 5. Init Loop
       setupControls();
       clock = new THREE.Clock();
       animate();
     }
 
-    // --- WORLD BUILDING ---
+    // --- BUILDING THE WORLD (Realism) ---
     function buildCity() {
-      // Wet ground
+      // Wet reflective asphalt
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(500, 500),
-        new THREE.MeshStandardMaterial({ color: 0x020305, roughness: 0.1, metalness: 0.8 })
+        new THREE.MeshStandardMaterial({ color: 0x05070a, roughness: 0.1, metalness: 0.8 })
       );
       ground.rotation.x = -Math.PI / 2;
       ground.receiveShadow = true;
       scene.add(ground);
 
-      // Glowing grid
-      const grid = new THREE.GridHelper(500, 100, 0x00f0ff, 0x001122);
-      grid.position.y = 0.1;
-      scene.add(grid);
+      // Procedural Window Texture Function
+      function createWindowTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64; canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#020305'; ctx.fillRect(0,0,64,64); // Dark building
+        for(let i=0; i<8; i++) {
+          for(let j=0; j<8; j++) {
+            if(Math.random() > 0.4) {
+              ctx.fillStyle = Math.random() > 0.5 ? '#00f0ff' : '#ff00a0';
+              ctx.fillRect(i*8+2, j*8+4, 4, 2);
+            }
+          }
+        }
+        return new THREE.CanvasTexture(canvas);
+      }
 
-      // Buildings
-      for (let x = -100; x <= 100; x += 25) {
-        for (let z = -100; z <= 100; z += 25) {
+      for (let x = -80; x <= 80; x += 25) {
+        for (let z = -80; z <= 80; z += 25) {
           if (Math.abs(x) < 20 && Math.abs(z) < 20) continue; 
           if (Math.random() > 0.8) continue;
           
-          const h = 15 + Math.random() * 60;
-          const w = 10 + Math.random() * 6;
+          const h = 15 + Math.random() * 50;
+          const w = 8 + Math.random() * 6;
           const neon = Math.random() > 0.5 ? 0x00f0ff : 0xff00a0;
           
-          const geo = new THREE.BoxGeometry(w, h, w);
-          
-          // Procedural window texture
-          const canvas = document.createElement('canvas');
-          canvas.width = 64; canvas.height = 64;
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#020305'; ctx.fillRect(0,0,64,64);
-          ctx.fillStyle = Math.random() > 0.5 ? '#00f0ff' : '#ff00a0';
-          for(let i=0; i<8; i++) for(let j=0; j<8; j++) {
-            if(Math.random() > 0.6) ctx.fillRect(i*8+2, j*8+2, 4, 6);
-          }
-          const tex = new THREE.CanvasTexture(canvas);
+          const tex = createWindowTexture();
           tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-          tex.repeat.set(4, h/5);
+          tex.repeat.set(2, Math.floor(h/5));
 
           const mat = new THREE.MeshStandardMaterial({ 
-            map: tex, color: 0xffffff, emissive: neon, emissiveIntensity: 0.2, roughness: 0.4, metalness: 0.6 
+            map: tex, color: 0xffffff, emissive: neon, emissiveIntensity: 0.1, roughness: 0.5, metalness: 0.5 
           });
           
-          const b = new THREE.Mesh(geo, mat);
+          const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), mat);
           b.position.set(x, h/2, z);
           b.castShadow = true;
           b.receiveShadow = true;
-          
-          // Neon Edges
-          const edges = new THREE.EdgesGeometry(geo);
-          b.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: neon, transparent: true, opacity: 0.8 })));
-          
           scene.add(b);
           
-          // Add street lamp
-          if (Math.random() > 0.7) {
-            const lampLight = new THREE.PointLight(neon, 1, 30);
-            lampLight.position.set(x, 10, z + 10);
-            scene.add(lampLight);
+          // Neon sign edges
+          const edges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(b.geometry), 
+            new THREE.LineBasicMaterial({ color: neon, transparent: true, opacity: 0.5 })
+          );
+          b.add(edges);
+
+          // Street light
+          if (Math.random() > 0.6) {
+            const light = new THREE.PointLight(neon, 1.5, 25);
+            light.position.set(x, 5, z + 6);
+            scene.add(light);
           }
         }
       }
@@ -309,48 +313,60 @@
     function buildCar() {
       car = new THREE.Group();
       
-      // Chassis
-      const body = new THREE.Mesh(
-        new THREE.BoxGeometry(2.2, 0.8, 4.5),
-        new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.1 })
-      );
-      body.position.y = 0.8;
-      body.castShadow = true;
-      car.add(body);
+      // Sleek chassis
+      const chassisMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2 });
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 4.5), chassisMat);
+      chassis.position.y = 0.7;
+      chassis.castShadow = true;
+      car.add(chassis);
+
+      // Sloped Hood
+      const hood = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.3, 1.5), chassisMat);
+      hood.position.set(0, 0.9, 1.5);
+      car.add(hood);
 
       // Glass Cabin
-      const cabin = new THREE.Mesh(
-        new THREE.BoxGeometry(1.8, 0.7, 2),
-        new THREE.MeshStandardMaterial({ color: 0x00f0ff, metalness: 1, roughness: 0, transparent: true, opacity: 0.6 })
-      );
-      cabin.position.set(0, 1.5, -0.2);
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x001122, metalness: 1, roughness: 0, transparent: true, opacity: 0.7 });
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 2), glassMat);
+      cabin.position.set(0, 1.3, -0.2);
       car.add(cabin);
 
       // Wheels
-      const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
-      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.8 });
-      const positions = [[-1.1, 0.4, 1.4], [1.1, 0.4, 1.4], [-1.1, 0.4, -1.4], [1.1, 0.4, -1.4]];
+      const wheelGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.35, 16);
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.9 });
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.5 });
+      
+      const pos = [[-1.1, 0.45, 1.4], [1.1, 0.45, 1.4], [-1.1, 0.45, -1.4], [1.1, 0.45, -1.4]];
       car.wheels = [];
       
-      positions.forEach(pos => {
+      pos.forEach(p => {
         const wheel = new THREE.Mesh(wheelGeo, wheelMat);
         wheel.rotation.z = Math.PI / 2;
-        wheel.position.set(...pos);
+        wheel.position.set(...p);
         wheel.castShadow = true;
+        
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.36, 8), rimMat);
+        wheel.add(rim);
+        
         car.add(wheel);
         car.wheels.push(wheel);
       });
 
-      // Headlights
-      const headlight1 = new THREE.SpotLight(0x00f0ff, 5, 40, Math.PI/6, 0.5, 1);
-      headlight1.position.set(-0.8, 0.8, 2.2);
-      headlight1.target.position.set(-0.8, 0, 20);
-      car.add(headlight1); car.add(headlight1.target);
+      // Headlights (Actual Spotlights)
+      const hl1 = new THREE.SpotLight(0x00f0ff, 3, 30, Math.PI/6, 0.5, 1);
+      hl1.position.set(-0.8, 0.8, 2.2);
+      hl1.target.position.set(-0.8, 0, 15);
+      car.add(hl1); car.add(hl1.target);
       
-      const headlight2 = headlight1.clone();
-      headlight2.position.set(0.8, 0.8, 2.2);
-      headlight2.target.position.set(0.8, 0, 20);
-      car.add(headlight2); car.add(headlight2.target);
+      const hl2 = hl1.clone();
+      hl2.position.set(0.8, 0.8, 2.2);
+      hl2.target.position.set(0.8, 0, 15);
+      car.add(hl2); car.add(hl2.target);
+
+      // Taillights
+      const tl = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: 0xff00a0 }));
+      tl.position.set(0, 0.8, -2.25);
+      car.add(tl);
 
       car.position.set(8, 0, 0);
       scene.add(car);
@@ -359,29 +375,48 @@
     function buildPlayer() {
       player = new THREE.Group();
       
-      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.2 });
-      const neonMat = new THREE.MeshStandardMaterial({ color: selectedChar.color, emissive: selectedChar.color, emissiveIntensity: 2 });
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.7, roughness: 0.3 });
+      const neonMat = new THREE.MeshStandardMaterial({ color: selectedChar.color, emissive: selectedChar.color, emissiveIntensity: 1.5 });
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.6 });
 
+      // Torso
       const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 0.4), bodyMat);
-      torso.position.y = 1; torso.castShadow = true;
+      torso.position.y = 1.2; torso.castShadow = true;
       
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), bodyMat);
-      head.position.y = 1.7; head.castShadow = true;
+      // Head & Visor
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), skinMat);
+      head.position.y = 1.9; head.castShadow = true;
       
       const visor = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.1, 0.1), neonMat);
-      visor.position.set(0, 1.7, 0.2);
+      visor.position.set(0, 1.9, 0.2);
 
-      const legs = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.4), bodyMat);
-      legs.position.y = 0.4; legs.castShadow = true;
+      // Arms & Legs (for walking animation)
+      player.lArm = new THREE.Group();
+      player.rArm = new THREE.Group();
+      player.lLeg = new THREE.Group();
+      player.rLeg = new THREE.Group();
 
-      player.add(torso, head, visor, legs);
+      const armGeo = new THREE.BoxGeometry(0.2, 0.8, 0.2);
+      const legGeo = new THREE.BoxGeometry(0.25, 0.9, 0.25);
+
+      const laMesh = new THREE.Mesh(armGeo, bodyMat); laMesh.position.y = -0.4; player.lArm.add(laMesh);
+      const raMesh = new THREE.Mesh(armGeo, bodyMat); raMesh.position.y = -0.4; player.rArm.add(raMesh);
       
-      // Jetpack glow
-      const jetpack = new THREE.PointLight(selectedChar.color, 2, 5);
-      jetpack.position.set(0, 1, -0.3);
-      player.add(jetpack);
+      const llMesh = new THREE.Mesh(legGeo, bodyMat); llMesh.position.y = -0.45; player.lLeg.add(llMesh);
+      const rlMesh = new THREE.Mesh(legGeo, bodyMat); rlMesh.position.y = -0.45; player.rLeg.add(rlMesh);
 
-      player.position.set(0, 0, 0);
+      player.lArm.position.set(-0.5, 1.6, 0);
+      player.rArm.position.set(0.5, 1.6, 0);
+      player.lLeg.position.set(-0.2, 0.9, 0);
+      player.rLeg.position.set(0.2, 0.9, 0);
+
+      player.add(torso, head, visor, player.lArm, player.rArm, player.lLeg, player.rLeg);
+      
+      // Chest glow
+      const chestLight = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.05), neonMat);
+      chestLight.position.set(0, 1.4, 0.2);
+      player.add(chestLight);
+
       scene.add(player);
     }
 
@@ -395,8 +430,12 @@
       ring.rotation.x = Math.PI / 2;
       group.add(ring);
       
-      const light = new THREE.PointLight(0x00f0ff, 2, 10);
-      group.add(light);
+      const beam = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.1, 20, 8),
+        new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.2 })
+      );
+      beam.position.y = 10;
+      group.add(beam);
 
       group.position.set(x, 1.5, z);
       scene.add(group);
@@ -405,16 +444,25 @@
 
     function spawnEnemy() {
       const enemy = new THREE.Group();
+      
       const core = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(0.8),
+        new THREE.IcosahedronGeometry(0.6),
         new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 1.5 })
       );
-      const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(1.2, 0.05, 8, 24),
+      
+      const ring1 = new THREE.Mesh(
+        new THREE.TorusGeometry(1, 0.05, 8, 32),
         new THREE.MeshBasicMaterial({ color: 0xff0000 })
       );
-      enemy.add(core, ring);
-      enemy.userData = { hp: 100, ring: ring };
+      
+      const ring2 = new THREE.Mesh(
+        new THREE.TorusGeometry(0.8, 0.05, 8, 32),
+        new THREE.MeshBasicMaterial({ color: 0xff00a0 })
+      );
+      ring2.rotation.x = Math.PI / 2;
+
+      enemy.add(core, ring1, ring2);
+      enemy.userData = { hp: 100, ring1: ring1, ring2: ring2 };
       
       enemy.position.set((Math.random() - 0.5) * 60, 3 + Math.random() * 3, (Math.random() - 0.5) * 60);
       scene.add(enemy);
@@ -423,14 +471,14 @@
 
     // --- COMBAT & EFFECTS ---
     function createExplosion(pos, color) {
-      for(let i=0; i<10; i++) {
+      for(let i=0; i<15; i++) {
         const p = new THREE.Mesh(
           new THREE.BoxGeometry(0.2, 0.2, 0.2),
           new THREE.MeshBasicMaterial({ color: color })
         );
         p.position.copy(pos);
         p.userData = {
-          vel: new THREE.Vector3((Math.random()-0.5)*10, (Math.random()-0.5)*10, (Math.random()-0.5)*10),
+          vel: new THREE.Vector3((Math.random()-0.5)*15, (Math.random()-0.5)*15, (Math.random()-0.5)*15),
           life: 1.0
         };
         scene.add(p);
@@ -443,7 +491,7 @@
       
       const now = performance.now();
       let cd = currentWeapon.cooldown;
-      if (selectedChar.id === 'netrunner') cd *= 0.8; // Character bonus
+      if (selectedChar.id === 'netrunner') cd *= 0.8; 
       if (now - lastShootTime < cd) return;
       lastShootTime = now;
 
@@ -451,14 +499,14 @@
       raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
       
       const startPos = player.position.clone().add(new THREE.Vector3(0, 1.5, 0));
+      const endPos = startPos.clone().add(raycaster.ray.direction.clone().multiplyScalar(currentWeapon.range));
       
       // Bullet Laser
-      const points = [
-        startPos,
-        startPos.clone().add(raycaster.ray.direction.clone().multiplyScalar(currentWeapon.range))
-      ];
-      const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-      const line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0x00f0ff, linewidth: 2 }));
+      const points = [startPos, endPos];
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(points), 
+        new THREE.LineBasicMaterial({ color: 0x00f0ff })
+      );
       scene.add(line);
       setTimeout(() => scene.remove(line), 40);
 
@@ -476,7 +524,7 @@
         
         if (enemies.includes(enemy)) {
           enemy.userData.hp -= currentWeapon.damage;
-          createExplosion(hits[0].point, 0xff0000); // Hit sparks
+          createExplosion(hits[0].point, 0xffaa00); // Hit sparks
 
           if (enemy.userData.hp <= 0) {
             createExplosion(enemy.position, 0xff0000); // Explosion
@@ -607,7 +655,7 @@
     function buildShop() {
       const list = document.getElementById('shop-items');
       list.innerHTML = '';
-      weapons.forEach((w, i) => {
+      weapons.forEach((w) => {
         const btn = document.createElement('button');
         btn.className = `w-full p-3 rounded-lg text-left flex justify-between items-center transition-colors ${w.owned ? 'bg-cyan-900/50 border border-cyan-500 hover:bg-cyan-800/60' : 'bg-black/60 border border-gray-600 hover:bg-gray-800'}`;
         btn.innerHTML = `
@@ -636,7 +684,6 @@
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.1);
-      const time = clock.getElapsedTime();
 
       if (player) {
         const activeObj = isDriving ? car : player;
@@ -646,20 +693,37 @@
         let moving = false;
         if (keys.w) { activeObj.position.z -= speed * dt; moving = true; }
         if (keys.s) { activeObj.position.z += speed * dt; moving = true; }
-        if (keys.a) { 
-          activeObj.position.x -= speed * dt; 
-          if(isDriving) activeObj.rotation.y += 2 * dt;
-          moving = true; 
-        }
-        if (keys.d) { 
-          activeObj.position.x += speed * dt; 
-          if(isDriving) activeObj.rotation.y -= 2 * dt;
-          moving = true; 
-        }
+        if (keys.a) { activeObj.position.x -= speed * dt; moving = true; }
+        if (keys.d) { activeObj.position.x += speed * dt; moving = true; }
 
-        // Spin wheels
-        if (isDriving && moving) {
-          car.wheels.forEach(w => w.rotation.x -= 10 * dt);
+        // Animation: Walk Cycle
+        if (!isDriving) {
+          if (moving) {
+            walkTime += dt * 10;
+            player.lArm.rotation.x = Math.sin(walkTime) * 0.5;
+            player.rArm.rotation.x = -Math.sin(walkTime) * 0.5;
+            player.lLeg.rotation.x = -Math.sin(walkTime) * 0.5;
+            player.rLeg.rotation.x = Math.sin(walkTime) * 0.5;
+            
+            // Face movement direction
+            if (keys.w) player.rotation.y = 0;
+            if (keys.s) player.rotation.y = Math.PI;
+            if (keys.a) player.rotation.y = Math.PI / 2;
+            if (keys.d) player.rotation.y = -Math.PI / 2;
+          } else {
+            // Idle
+            player.lArm.rotation.x = 0;
+            player.rArm.rotation.x = 0;
+            player.lLeg.rotation.x = 0;
+            player.rLeg.rotation.x = 0;
+          }
+        } else {
+          // Car wheels spin
+          if (moving) {
+            car.wheels.forEach(w => w.rotation.x -= 10 * dt);
+            if (keys.a) car.rotation.y += 2 * dt;
+            if (keys.d) car.rotation.y -= 2 * dt;
+          }
         }
 
         // Particles update
@@ -677,8 +741,9 @@
 
         // Enemy Logic
         enemies.forEach(enemy => {
-          enemy.userData.ring.rotation.x += dt;
-          enemy.userData.ring.rotation.y += dt;
+          enemy.userData.ring1.rotation.x += dt * 2;
+          enemy.userData.ring2.rotation.y += dt * 2;
+          enemy.position.y = 3 + Math.sin(clock.getElapsedTime() * 2) * 0.5; // Hover
           
           const dir = activeObj.position.clone().sub(enemy.position).normalize();
           enemy.position.add(dir.multiplyScalar(6 * dt));
@@ -686,11 +751,11 @@
           const dist = activeObj.position.distanceTo(enemy.position);
           if (dist < 3) {
             let dmg = 20 * dt;
-            if (selectedChar.id === 'ghost') dmg *= 0.8; // Character bonus
+            if (selectedChar.id === 'ghost') dmg *= 0.8; 
             health -= dmg;
             updateUI();
             if(health <= 0) {
-              health = 100; // Respawn
+              health = 100; 
               player.position.set(0,0,0);
               car.position.set(8,0,0);
               if(isDriving) toggleCar();
@@ -729,12 +794,11 @@
           document.getElementById('btn-car').classList.add('hidden');
         }
 
-        // Camera follow
-        const camHeight = isDriving ? 8 : 6;
-        const camDist = isDriving ? 15 : 10;
+        // Camera Follow
+        const camHeight = isDriving ? 7 : 5;
+        const camDist = isDriving ? 14 : 9;
         const targetCamPos = new THREE.Vector3(activeObj.position.x, activeObj.position.y + camHeight, activeObj.position.z + camDist);
         
-        // Smooth camera
         camera.position.lerp(targetCamPos, 5 * dt);
         camera.lookAt(activeObj.position.x, activeObj.position.y + 1.5, activeObj.position.z);
       }
