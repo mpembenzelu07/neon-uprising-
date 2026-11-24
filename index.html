@@ -11,18 +11,33 @@
     body { margin: 0; overflow: hidden; background: #05070d; color: white; font-family: 'Rajdhani', sans-serif; touch-action: none; }
     .font-display { font-family: 'Orbitron', sans-serif; }
     canvas { display: block; }
-    .glass { background: rgba(10, 20, 35, 0.85); border: 1px solid rgba(0, 240, 255, 0.3); }
+    .glass { background: rgba(10, 20, 35, 0.85); border: 1px solid rgba(0, 240, 255, 0.3); backdrop-filter: blur(5px); }
     .neon-cyan { color: #00f0ff; text-shadow: 0 0 10px #00f0ff; }
     .neon-pink { color: #ff00a0; text-shadow: 0 0 10px #ff00a0; }
     .hidden { display: none !important; }
     
-    /* Mobile Controls */
+    /* Controls */
     .d-pad-btn {
       width: 50px; height: 50px; background: rgba(0, 240, 255, 0.2); 
       border: 2px solid #00f0ff; border-radius: 8px; display: flex; 
       align-items: center; justify-content: center; user-select: none;
+      font-size: 20px; color: #00f0ff;
     }
     .d-pad-btn:active { background: rgba(0, 240, 255, 0.6); }
+    
+    .action-btn {
+      width: 60px; height: 60px; border-radius: 50%; display: flex; 
+      align-items: center; justify-content: center; user-select: none;
+      font-size: 24px; border: 2px solid;
+    }
+    .action-btn:active { transform: scale(0.9); }
+    
+    /* Crosshair */
+    #crosshair {
+      position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
+      background: #00f0ff; border-radius: 50%; transform: translate(-50%, -50%);
+      pointer-events: none; z-index: 20; box-shadow: 0 0 10px #00f0ff;
+    }
   </style>
 </head>
 <body>
@@ -30,45 +45,78 @@
   <!-- LOADING -->
   <div id="loading" class="fixed inset-0 flex flex-col items-center justify-center bg-black z-50">
     <h1 class="font-display text-4xl neon-cyan tracking-widest animate-pulse">NEON UPRISING</h1>
-    <p class="mt-4 text-cyan-300">LOADING...</p>
+    <p class="mt-4 text-cyan-300">INITIALIZING CITY...</p>
   </div>
 
   <!-- CHARACTER SELECT -->
-  <div id="char-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-black/90 z-40 hidden p-4">
+  <div id="char-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-black/90 z-40 hidden p-4 overflow-y-auto">
     <h1 class="font-display text-3xl md:text-5xl neon-cyan mb-8 tracking-widest text-center">CHOOSE YOUR OPERATIVE</h1>
-    <div id="char-container" class="flex flex-col md:flex-row gap-4 w-full max-w-4xl justify-center"></div>
+    <div id="char-container" class="flex flex-col md:flex-row gap-4 w-full max-w-4xl justify-center pb-10"></div>
   </div>
 
   <!-- GAME UI -->
   <div id="game-ui" class="fixed inset-0 z-10 hidden pointer-events-none">
-    <div class="absolute top-4 left-4 glass p-3 rounded-xl pointer-events-auto">
-      <p class="text-cyan-400 text-xs tracking-widest">OPERATIVE</p>
-      <h2 id="ui-char" class="font-display text-lg neon-cyan">—</h2>
-    </div>
-    <div class="absolute top-4 right-4 glass p-3 rounded-xl text-right pointer-events-auto">
-      <p class="text-cyan-400 text-xs tracking-widest">CREDS</p>
-      <h2 id="ui-money" class="font-display text-2xl neon-pink">1,000</h2>
+    <!-- Top HUD -->
+    <div class="absolute top-4 left-4 flex gap-2">
+      <div class="glass p-3 rounded-xl pointer-events-auto">
+        <p class="text-cyan-400 text-xs tracking-widest">OPERATIVE</p>
+        <h2 id="ui-char" class="font-display text-lg neon-cyan">—</h2>
+      </div>
+      <div class="glass p-3 rounded-xl pointer-events-auto">
+        <p class="text-red-400 text-xs tracking-widest">HEALTH</p>
+        <h2 id="ui-health" class="font-display text-lg text-red-500">100</h2>
+      </div>
     </div>
     
+    <div class="absolute top-4 right-4 flex gap-2">
+      <div class="glass p-3 rounded-xl text-right pointer-events-auto">
+        <p class="text-cyan-400 text-xs tracking-widest">WEAPON</p>
+        <h2 id="ui-weapon" class="font-display text-sm text-pink-400">Pistol</h2>
+      </div>
+      <div class="glass p-3 rounded-xl text-right pointer-events-auto">
+        <p class="text-cyan-400 text-xs tracking-widest">CREDS</p>
+        <h2 id="ui-money" class="font-display text-2xl neon-pink">1,000</h2>
+      </div>
+    </div>
+    
+    <div id="crosshair" class="hidden"></div>
+
     <!-- Interaction Prompt -->
     <div id="prompt" class="absolute top-1/3 left-1/2 -translate-x-1/2 glass px-6 py-2 rounded-lg hidden">
-      <span class="text-cyan-300">Press <span class="font-display neon-cyan">E</span> to complete mission</span>
+      <span class="text-cyan-300">Press <span class="font-display neon-cyan">E</span> to interact</span>
     </div>
 
     <!-- Mobile D-Pad -->
-    <div class="absolute bottom-8 left-8 flex flex-col items-center gap-2 pointer-events-auto md:hidden">
+    <div class="absolute bottom-6 left-6 flex flex-col items-center gap-1 pointer-events-auto md:hidden">
       <div class="d-pad-btn" id="btn-w">▲</div>
-      <div class="flex gap-2">
+      <div class="flex gap-1">
         <div class="d-pad-btn" id="btn-a">◀</div>
         <div class="d-pad-btn" id="btn-s">▼</div>
         <div class="d-pad-btn" id="btn-d">▶</div>
       </div>
     </div>
+
     <!-- Mobile Action Buttons -->
-    <div class="absolute bottom-8 right-8 flex flex-col gap-4 pointer-events-auto md:hidden">
-      <button id="btn-e" class="w-16 h-16 rounded-full bg-cyan-500/20 border-2 border-cyan-400 font-display text-cyan-300 text-xl active:bg-cyan-500/60">E</button>
-      <button id="btn-kimi" class="w-16 h-16 rounded-full bg-pink-500/20 border-2 border-pink-400 font-display text-pink-300 text-sm active:bg-pink-500/60">KIMI</button>
+    <div class="absolute bottom-6 right-6 flex flex-col gap-3 pointer-events-auto md:hidden items-end">
+      <div class="flex gap-3">
+        <button id="btn-shop" class="action-btn bg-yellow-500/20 border-yellow-400 text-yellow-300 text-xl">🛒</button>
+        <button id="btn-kimi" class="action-btn bg-pink-500/20 border-pink-400 text-pink-300 text-xl">🤖</button>
+      </div>
+      <div class="flex gap-3">
+        <button id="btn-car" class="action-btn bg-blue-500/20 border-blue-400 text-blue-300 text-xl">🚗</button>
+        <button id="btn-e" class="action-btn bg-cyan-500/20 border-cyan-400 text-cyan-300 text-xl hidden">E</button>
+        <button id="btn-shoot" class="action-btn bg-red-500/20 border-red-400 text-red-300 text-2xl">🔫</button>
+      </div>
     </div>
+  </div>
+
+  <!-- SHOP PANEL -->
+  <div id="shop-panel" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md glass p-6 rounded-xl z-50 hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-display text-2xl neon-cyan">BLACK MARKET</h3>
+      <button id="close-shop" class="text-white text-2xl px-2">✕</button>
+    </div>
+    <div class="space-y-3" id="shop-items"></div>
   </div>
 
   <!-- KIMI PANEL -->
@@ -77,24 +125,40 @@
       <h3 class="font-display text-cyan-300">KIMI AI</h3>
       <button id="close-kimi" class="text-white text-xl px-2">✕</button>
     </div>
-    <div id="kimi-msg" class="text-sm text-cyan-100 h-24 overflow-y-auto mb-2 bg-black/40 p-2 rounded">
-      Hello! I am Kimi. Complete missions to earn Creds.
+    <div id="kimi-msg" class="text-sm text-cyan-100 h-32 overflow-y-auto mb-3 bg-black/40 p-2 rounded">
+      Hello! I am Kimi. Shoot drones to earn extra creds. Buy better guns in the shop!
+    </div>
+    <div class="flex gap-2">
+      <input id="kimi-input" type="text" placeholder="Ask me..." class="flex-1 bg-black/50 border border-cyan-500/50 rounded px-2 py-1 text-sm text-white focus:outline-none">
+      <button id="kimi-send" class="bg-cyan-500/20 border border-cyan-500 px-3 rounded text-cyan-300">Send</button>
     </div>
   </div>
 
   <script>
     // --- GAME STATE ---
-    let scene, camera, renderer, player, clock;
+    let scene, camera, renderer, player, car, clock;
     let money = 1000;
+    let health = 100;
     let selectedChar = null;
     let keys = { w: false, a: false, s: false, d: false };
-    let missions = [];
-    let nearbyMission = null;
+    let missions = [], enemies = [], bullets = [];
+    let nearbyMission = null, nearbyCar = null;
+    let isDriving = false;
+    let lastShootTime = 0;
+    
+    // Weapons
+    let weapons = [
+      { name: 'Fists', damage: 0, range: 0, cooldown: 500, price: 0, owned: true },
+      { name: 'Pistol', damage: 34, range: 50, cooldown: 400, price: 0, owned: true },
+      { name: 'SMG', damage: 20, range: 60, cooldown: 150, price: 1500, owned: false },
+      { name: 'Pulse Rifle', damage: 100, range: 100, cooldown: 800, price: 4000, owned: false }
+    ];
+    let currentWeapon = weapons[1];
 
     const characters = [
-      { id: 'fixer', name: 'THE FIXER', color: '#ff3366', desc: '+10% Transport Payout' },
-      { id: 'ghost', name: 'THE GHOST', color: '#00f0ff', desc: 'Faster Police Escape' },
-      { id: 'netrunner', name: 'THE NETRUNNER', color: '#b44cff', desc: 'Unlocks Hacking Jobs' }
+      { id: 'fixer', name: 'THE FIXER', color: '#ff3366', desc: 'Earns 20% more from missions.' },
+      { id: 'ghost', name: 'THE GHOST', color: '#00f0ff', desc: 'Takes 20% less damage.' },
+      { id: 'netrunner', name: 'NETRUNNER', color: '#b44cff', desc: 'Weapons cooldown 20% faster.' }
     ];
 
     // --- INITIALIZATION ---
@@ -103,7 +167,7 @@
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('char-screen').classList.remove('hidden');
         buildCharacterCards();
-      }, 800);
+      }, 1000);
     };
 
     function buildCharacterCards() {
@@ -112,7 +176,7 @@
         const card = document.createElement('div');
         card.className = 'glass p-4 rounded-xl cursor-pointer hover:scale-105 transition-transform text-center w-full md:w-64';
         card.innerHTML = `
-          <div class="w-12 h-12 rounded-full mx-auto mb-3" style="background:${char.color}; box-shadow: 0 0 20px ${char.color};"></div>
+          <div class="w-16 h-16 rounded-full mx-auto mb-3" style="background:${char.color}; box-shadow: 0 0 20px ${char.color};"></div>
           <h3 class="font-display text-lg mb-1" style="color:${char.color};">${char.name}</h3>
           <p class="text-xs text-gray-300">${char.desc}</p>
         `;
@@ -126,12 +190,14 @@
       selectedChar = char;
       document.getElementById('char-screen').classList.add('hidden');
       document.getElementById('game-ui').classList.remove('hidden');
+      document.getElementById('crosshair').classList.remove('hidden');
       document.getElementById('ui-char').innerText = char.name;
-      document.getElementById('ui-money').innerText = money;
+      document.getElementById('ui-char').style.color = char.color;
+      updateUI();
 
       // 1. Setup Three.js
       scene = new THREE.Scene();
-      scene.fog = new THREE.Fog(0x05070d, 20, 100);
+      scene.fog = new THREE.Fog(0x05070d, 30, 120);
       camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
       
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -140,22 +206,24 @@
       document.body.appendChild(renderer.domElement);
 
       // 2. Lights
-      scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+      scene.add(new THREE.AmbientLight(0xffffff, 0.3));
       const dirLight = new THREE.DirectionalLight(0x00f0ff, 1);
       dirLight.position.set(10, 20, 10);
       scene.add(dirLight);
 
       // 3. Ground & Grid
       const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(200, 200),
+        new THREE.PlaneGeometry(500, 500),
         new THREE.MeshStandardMaterial({ color: 0x0a1220 })
       );
       ground.rotation.x = -Math.PI / 2;
       scene.add(ground);
 
-      const grid = new THREE.GridHelper(200, 100, 0x00f0ff, 0x002233);
+      const grid = new THREE.GridHelper(500, 100, 0x00f0ff, 0x002233);
       grid.position.y = 0.1;
       scene.add(grid);
+
+      buildCity();
 
       // 4. Player
       player = new THREE.Mesh(
@@ -165,60 +233,235 @@
       player.position.set(0, 1, 0);
       scene.add(player);
 
-      // 5. Spawn Missions
+      // 5. Car
+      buildCar();
+      
+      // 6. Spawn Entities
       spawnMission(10, 10);
       spawnMission(-15, 5);
-      spawnMission(0, -20);
+      spawnEnemy();
 
-      // 6. Controls
+      // 7. Controls
       setupControls();
       clock = new THREE.Clock();
       
-      // 7. Start Loop
+      // 8. Loop
       animate();
     }
 
-    // --- CONTROLS ---
+    // --- WORLD BUILDING ---
+    function buildCity() {
+      for (let x = -100; x <= 100; x += 20) {
+        for (let z = -100; z <= 100; z += 20) {
+          if (Math.abs(x) < 15 && Math.abs(z) < 15) continue; // Keep spawn clear
+          if (Math.random() > 0.7) continue;
+          
+          const h = 10 + Math.random() * 40;
+          const w = 8 + Math.random() * 4;
+          const neon = Math.random() > 0.5 ? 0x00f0ff : 0xff00a0;
+          
+          const geo = new THREE.BoxGeometry(w, h, w);
+          const mat = new THREE.MeshStandardMaterial({ color: 0x05070d, emissive: neon, emissiveIntensity: 0.05 });
+          const b = new THREE.Mesh(geo, mat);
+          b.position.set(x, h/2, z);
+          
+          const edges = new THREE.EdgesGeometry(geo);
+          b.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: neon, transparent: true, opacity: 0.6 })));
+          scene.add(b);
+        }
+      }
+    }
+
+    function buildCar() {
+      car = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(2, 1, 4),
+        new THREE.MeshStandardMaterial({ color: 0xff00a0, emissive: 0xff00a0, emissiveIntensity: 0.3 })
+      );
+      body.position.y = 0.8;
+      car.add(body);
+      
+      const roof = new THREE.Mesh(
+        new THREE.BoxGeometry(1.8, 0.8, 2),
+        new THREE.MeshStandardMaterial({ color: 0x111111 })
+      );
+      roof.position.set(0, 1.7, -0.2);
+      car.add(roof);
+      
+      car.position.set(5, 0, 0);
+      scene.add(car);
+    }
+
+    // --- ENTITIES ---
+    function spawnMission(x, z) {
+      const marker = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.5, 1.5, 0.2, 16),
+        new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.8 })
+      );
+      marker.position.set(x, 0.1, z);
+      scene.add(marker);
+      missions.push(marker);
+    }
+
+    function spawnEnemy() {
+      const enemy = new THREE.Mesh(
+        new THREE.OctahedronGeometry(1),
+        new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.8 })
+      );
+      enemy.position.set((Math.random() - 0.5) * 60, 2 + Math.random() * 5, (Math.random() - 0.5) * 60);
+      enemy.userData.hp = 100;
+      scene.add(enemy);
+      enemies.push(enemy);
+    }
+
+    // --- SHOOTING ---
+    function shoot() {
+      if (isDriving || currentWeapon.name === 'Fists') return;
+      
+      const now = performance.now();
+      if (now - lastShootTime < currentWeapon.cooldown) return;
+      lastShootTime = now;
+
+      // Raycaster from center of screen
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+      
+      // Visual bullet (laser)
+      const points = [
+        player.position.clone().add(new THREE.Vector3(0, 1, 0)),
+        player.position.clone().add(raycaster.ray.direction.clone().multiplyScalar(currentWeapon.range))
+      ];
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const lineMat = new THREE.LineBasicMaterial({ color: 0x00f0ff });
+      const line = new THREE.Line(lineGeo, lineMat);
+      scene.add(line);
+      setTimeout(() => scene.remove(line), 50);
+
+      // Check hits
+      const hits = raycaster.intersectObjects(enemies);
+      if (hits.length > 0) {
+        const enemy = hits[0].object;
+        enemy.userData.hp -= currentWeapon.damage;
+        
+        // Flash enemy
+        enemy.material.emissive.setHex(0xffffff);
+        setTimeout(() => { if(enemy.material) enemy.material.emissive.setHex(0xff0000); }, 50);
+
+        if (enemy.userData.hp <= 0) {
+          scene.remove(enemy);
+          enemies = enemies.filter(e => e !== enemy);
+          money += 250;
+          updateUI();
+          setTimeout(spawnEnemy, 2000); // Respawn
+        }
+      }
+    }
+
+    // --- CONTROLS & UI ---
+    function updateUI() {
+      document.getElementById('ui-money').innerText = money;
+      document.getElementById('ui-health').innerText = Math.max(0, health);
+      document.getElementById('ui-weapon').innerText = currentWeapon.name;
+    }
+
+    function toggleCar() {
+      if (nearbyCar || isDriving) {
+        isDriving = !isDriving;
+        player.visible = !isDriving;
+        if (isDriving) {
+          player.position.copy(car.position);
+          document.getElementById('btn-car').classList.add('bg-green-500/40');
+        } else {
+          player.position.copy(car.position).add(new THREE.Vector3(2, 1, 0));
+          document.getElementById('btn-car').classList.remove('bg-green-500/40');
+        }
+      }
+    }
+
+    function collectMission(marker) {
+      let payout = selectedChar.id === 'fixer' ? 600 : 500;
+      money += payout;
+      updateUI();
+      
+      scene.remove(marker);
+      missions = missions.filter(m => m !== marker);
+      nearbyMission = null;
+      document.getElementById('prompt').classList.add('hidden');
+
+      setTimeout(() => spawnMission((Math.random() - 0.5) * 80, (Math.random() - 0.5) * 80), 1500);
+    }
+
     function setupControls() {
-      // Keyboard
       window.addEventListener('keydown', e => {
         const k = e.key.toLowerCase();
         if (keys.hasOwnProperty(k)) keys[k] = true;
-        if (k === 'e' && nearbyMission) collectMission(nearbyMission);
+        if (k === 'e') {
+          if (nearbyMission) collectMission(nearbyMission);
+          if (nearbyCar && !isDriving) toggleCar();
+        }
+        if (k === 'f' && !isDriving) toggleCar();
+        if (k === ' ') shoot();
       });
       window.addEventListener('keyup', e => {
         const k = e.key.toLowerCase();
         if (keys.hasOwnProperty(k)) keys[k] = false;
       });
 
-      // Mobile D-Pad
+      // Mobile Buttons
       const bindTouch = (id, key) => {
         const btn = document.getElementById(id);
+        if(!btn) return;
         btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
         btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
         btn.addEventListener('mousedown', () => keys[key] = true);
         btn.addEventListener('mouseup', () => keys[key] = false);
       };
-      bindTouch('btn-w', 'w');
-      bindTouch('btn-a', 'a');
-      bindTouch('btn-s', 's');
-      bindTouch('btn-d', 'd');
+      bindTouch('btn-w', 'w'); bindTouch('btn-a', 'a'); 
+      bindTouch('btn-s', 's'); bindTouch('btn-d', 'd');
 
-      // Mobile E Button
       document.getElementById('btn-e').addEventListener('touchstart', (e) => {
         e.preventDefault();
         if (nearbyMission) collectMission(nearbyMission);
       });
+      
+      document.getElementById('btn-shoot').addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        shoot();
+      });
+      
+      document.getElementById('btn-car').addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        toggleCar();
+      });
 
-      // Kimi Panel
-      document.getElementById('btn-kimi').onclick = () => {
-        document.getElementById('kimi-panel').classList.remove('hidden');
+      // Panels
+      document.getElementById('btn-kimi').onclick = () => document.getElementById('kimi-panel').classList.remove('hidden');
+      document.getElementById('close-kimi').onclick = () => document.getElementById('kimi-panel').classList.add('hidden');
+      
+      document.getElementById('btn-shop').onclick = () => {
+        document.getElementById('shop-panel').classList.remove('hidden');
+        buildShop();
       };
-      document.getElementById('close-kimi').onclick = () => {
-        document.getElementById('kimi-panel').classList.add('hidden');
+      document.getElementById('close-shop').onclick = () => document.getElementById('shop-panel').classList.add('hidden');
+
+      // Kimi Chat
+      document.getElementById('kimi-send').onclick = () => {
+        const input = document.getElementById('kimi-input');
+        if(!input.value) return;
+        const msg = document.getElementById('kimi-msg');
+        msg.innerHTML += `<br><span class="text-white">You: ${input.value}</span>`;
+        
+        let reply = "I don't understand. Try asking about guns, drones, or cars.";
+        const q = input.value.toLowerCase();
+        if(q.includes('gun') || q.includes('weapon') || q.includes('shoot')) reply = "Buy better guns in the shop. The Pulse Rifle one-shots drones!";
+        if(q.includes('car') || q.includes('drive')) reply = "Walk up to the pink car and press the 🚗 button to drive.";
+        if(q.includes('money') || q.includes('creds')) reply = "Complete blue missions and shoot red drones for money.";
+        
+        msg.innerHTML += `<br><span class="text-cyan-300">Kimi: ${reply}</span>`;
+        input.value = '';
+        msg.scrollTop = msg.scrollHeight;
       };
 
-      // Resize
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -226,38 +469,32 @@
       });
     }
 
-    // --- MISSIONS ---
-    function spawnMission(x, z) {
-      const marker = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32),
-        new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.8 })
-      );
-      marker.position.set(x, 0.1, z);
-      
-      const beam = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.2, 0.2, 10, 8),
-        new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.2 })
-      );
-      beam.position.y = 5;
-      marker.add(beam);
-
-      scene.add(marker);
-      missions.push(marker);
-    }
-
-    function collectMission(marker) {
-      money += 500;
-      document.getElementById('ui-money').innerText = money;
-      
-      scene.remove(marker);
-      missions = missions.filter(m => m !== marker);
-      nearbyMission = null;
-      document.getElementById('prompt').classList.add('hidden');
-
-      // Spawn a new one after a short delay
-      setTimeout(() => {
-        spawnMission((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40);
-      }, 2000);
+    function buildShop() {
+      const list = document.getElementById('shop-items');
+      list.innerHTML = '';
+      weapons.forEach((w, i) => {
+        const btn = document.createElement('button');
+        btn.className = `w-full p-3 rounded text-left flex justify-between items-center ${w.owned ? 'bg-cyan-900/50 border border-cyan-500' : 'bg-black/50 border border-gray-600'}`;
+        btn.innerHTML = `
+          <div>
+            <div class="font-display ${w.owned ? 'text-cyan-300' : 'text-gray-300'}">${w.name}</div>
+            <div class="text-xs text-gray-400">Damage: ${w.damage} | Speed: ${w.cooldown}ms</div>
+          </div>
+          <div class="text-pink-400 font-display">${w.owned ? (currentWeapon.name === w.name ? 'EQUIPPED' : 'EQUIP') : '$'+w.price}</div>
+        `;
+        btn.onclick = () => {
+          if (w.owned) {
+            currentWeapon = w;
+          } else if (money >= w.price) {
+            money -= w.price;
+            w.owned = true;
+            currentWeapon = w;
+            updateUI();
+          }
+          buildShop();
+        };
+        list.appendChild(btn);
+      });
     }
 
     // --- GAME LOOP ---
@@ -266,38 +503,61 @@
       const dt = Math.min(clock.getDelta(), 0.1);
 
       if (player) {
+        const activeObj = isDriving ? car : player;
+        const speed = isDriving ? 35 : 15;
+        
         // Movement
-        const speed = 15;
-        if (keys.w) player.position.z -= speed * dt;
-        if (keys.s) player.position.z += speed * dt;
-        if (keys.a) player.position.x -= speed * dt;
-        if (keys.d) player.position.x += speed * dt;
+        if (keys.w) activeObj.position.z -= speed * dt;
+        if (keys.s) activeObj.position.z += speed * dt;
+        if (keys.a) activeObj.position.x -= speed * dt;
+        if (keys.d) activeObj.position.x += speed * dt;
 
-        // Camera Follow
-        const targetCamPos = new THREE.Vector3(player.position.x, player.position.y + 8, player.position.z + 12);
-        camera.position.lerp(targetCamPos, 0.1);
-        camera.lookAt(player.position);
-
-        // Check Mission Proximity
-        let closest = null;
-        let minDist = 4;
-
-        missions.forEach(m => {
-          m.rotation.y += dt * 2;
-          const dist = player.position.distanceTo(m.position);
-          if (dist < minDist) {
-            minDist = dist;
-            closest = m;
+        // Enemy Logic
+        enemies.forEach(enemy => {
+          const dir = activeObj.position.clone().sub(enemy.position).normalize();
+          enemy.position.add(dir.multiplyScalar(5 * dt));
+          
+          const dist = activeObj.position.distanceTo(enemy.position);
+          if (dist < 2.5) {
+            health -= 20 * dt;
+            updateUI();
           }
         });
 
-        if (closest !== nearbyMission) {
-          nearbyMission = closest;
-          const prompt = document.getElementById('prompt');
-          if (nearbyMission) prompt.classList.remove('hidden');
-          else prompt.classList.add('hidden');
+        // Check Proximities
+        let minDist = 4;
+        nearbyMission = null; nearbyCar = null;
+
+        missions.forEach(m => {
+          m.rotation.y += dt * 2;
+          if (activeObj.position.distanceTo(m.position) < minDist) nearbyMission = m;
+        });
+
+        if (!isDriving && player.position.distanceTo(car.position) < 4) nearbyCar = car;
+
+        // Prompt UI
+        const prompt = document.getElementById('prompt');
+        if (nearbyMission || nearbyCar) {
+          prompt.classList.remove('hidden');
+          prompt.innerHTML = nearbyMission 
+            ? `Press <span class="font-display neon-cyan">E</span> to complete mission`
+            : `Press <span class="font-display neon-cyan">F</span> to enter vehicle`;
+            
+          // Auto-show E button on mobile
+          if(nearbyMission) document.getElementById('btn-e').classList.remove('hidden');
+        } else {
+          prompt.classList.add('hidden');
+          document.getElementById('btn-e').classList.add('hidden');
         }
+
+        // Camera
+        const camHeight = isDriving ? 12 : 8;
+        const camDist = isDriving ? 18 : 12;
+        const targetCamPos = new THREE.Vector3(activeObj.position.x, activeObj.position.y + camHeight, activeObj.position.z + camDist);
+        camera.position.lerp(targetCamPos, 0.1);
+        camera.lookAt(activeObj.position);
       }
+      
       renderer.render(scene, camera);
     }
   </script>
