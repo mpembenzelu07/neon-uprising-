@@ -3,132 +3,210 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>NEON UPRISING — Open World</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>NEON UPRISING</title>
   
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-      }
-    }
-  </script>
-
-  <!-- ERROR CATCHER -->
-  <script>
-    window.addEventListener('error', function(e) {
-      document.getElementById('loading').innerHTML = `
-        <div class="text-center p-6 bg-red-900/80 rounded-xl border border-red-500 max-w-sm mx-4 z-50">
-          <div class="text-red-400 font-bold text-2xl mb-2 font-display">CRASH DETECTED</div>
-          <div class="text-white text-sm text-left overflow-auto max-h-40 bg-black/50 p-3 rounded">
-            <p>${e.message}</p>
-            <p class="mt-2 text-gray-400 text-xs">${e.filename}:${e.lineno}</p>
-          </div>
-          <button onclick="location.reload()" class="mt-4 bg-red-500 text-white px-6 py-2 rounded font-bold">Reload</button>
-        </div>
-      `;
-    });
-  </script>
+  <!-- Load Tailwind for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load Three.js for 3D -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
-    html, body { margin: 0; padding: 0; overflow: hidden; background: #05070d; color: #e6f7ff; font-family: 'Rajdhani', sans-serif; touch-action: none; }
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap');
+    body { margin: 0; overflow: hidden; background: #05070d; color: white; font-family: 'Rajdhani', sans-serif; }
     .font-display { font-family: 'Orbitron', sans-serif; }
-    #scene-canvas { display: block; position: absolute; inset: 0; }
-    .neon-cyan { color: #00f0ff; text-shadow: 0 0 20px #00f0ff88; }
-    .neon-pink { color: #ff00a0; text-shadow: 0 0 20px #ff00a088; }
-    .glass { background: rgba(10, 20, 35, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(0, 240, 255, 0.25); }
-    .char-card { transition: all .3s ease; cursor: pointer; }
-    .char-card:hover, .char-card.selected { transform: translateY(-6px); border-color: #00f0ff; box-shadow: 0 0 40px #00f0ff55; }
-    .grid-bg { background-image: linear-gradient(rgba(0,240,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,240,255,0.06) 1px, transparent 1px); background-size: 40px 40px; }
-    .fade { transition: opacity .5s ease; }
+    canvas { display: block; }
+    .glass { background: rgba(10, 20, 35, 0.85); border: 1px solid rgba(0, 240, 255, 0.3); }
+    .neon-cyan { color: #00f0ff; text-shadow: 0 0 10px #00f0ff; }
+    .neon-pink { color: #ff00a0; text-shadow: 0 0 10px #ff00a0; }
     .hidden { display: none !important; }
-    .glow-btn { transition: all .2s ease; }
-    .glow-btn:hover:not(:disabled) { box-shadow: 0 0 25px #00f0ff88; transform: scale(1.02); }
   </style>
 </head>
 <body>
-  <div id="loading" class="fixed inset-0 z-50 flex items-center justify-center bg-black">
+
+  <!-- LOADING SCREEN -->
+  <div id="loading" class="fixed inset-0 flex items-center justify-center bg-black z-50">
     <div class="text-center">
-      <div class="font-display text-3xl md:text-5xl neon-cyan animate-pulse tracking-widest">NEON UPRISING</div>
-      <div class="mt-4 text-cyan-300 tracking-widest text-sm">INITIALIZING WORLD...</div>
+      <h1 class="font-display text-4xl neon-cyan tracking-widest animate-pulse">NEON UPRISING</h1>
+      <p class="mt-4 text-cyan-300">INITIALIZING WORLD...</p>
     </div>
   </div>
 
-  <div id="character-select" class="fixed inset-0 z-40 hidden items-center justify-center grid-bg p-4 overflow-y-auto">
-    <div class="max-w-6xl w-full py-8">
-      <div class="text-center mb-10">
-        <h1 class="font-display text-4xl md:text-6xl font-black neon-cyan tracking-widest">NEON UPRISING</h1>
-        <p class="mt-2 text-cyan-300 tracking-[0.5em] text-xs md:text-sm">CHOOSE YOUR OPERATIVE</p>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="char-grid"></div>
-      <div class="text-center mt-10">
-        <button id="confirm-char" disabled class="glow-btn font-display text-xl px-12 py-4 bg-cyan-500/20 border-2 border-cyan-400 text-cyan-300 tracking-widest disabled:opacity-30 disabled:cursor-not-allowed">
-          ENTER THE CITY
-        </button>
-      </div>
+  <!-- CHARACTER SELECTION -->
+  <div id="char-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-black/90 z-40 hidden">
+    <h1 class="font-display text-4xl neon-cyan mb-8 tracking-widest">CHOOSE YOUR OPERATIVE</h1>
+    <div id="char-container" class="flex gap-6 flex-wrap justify-center"></div>
+  </div>
+
+  <!-- GAME UI -->
+  <div id="game-ui" class="fixed inset-0 z-10 hidden pointer-events-none">
+    <div class="absolute top-4 left-4 glass p-4 rounded-xl pointer-events-auto">
+      <p class="text-cyan-400 text-xs tracking-widest">OPERATIVE</p>
+      <h2 id="ui-char" class="font-display text-xl neon-cyan">—</h2>
+    </div>
+    <div class="absolute top-4 right-4 glass p-4 rounded-xl text-right pointer-events-auto">
+      <p class="text-cyan-400 text-xs tracking-widest">CREDS</p>
+      <h2 id="ui-money" class="font-display text-2xl neon-pink">1,000</h2>
+    </div>
+    <div class="absolute bottom-4 left-4 glass p-4 rounded-xl pointer-events-auto text-sm text-cyan-200">
+      WASD to move. Walk into the glowing cyan circle to earn money.
     </div>
   </div>
 
-  <div id="game" class="fixed inset-0 z-10 hidden">
-    <canvas id="scene-canvas"></canvas>
-    
-    <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-start pointer-events-none z-20">
-      <div class="glass rounded-lg px-5 py-3 pointer-events-auto">
-        <div class="text-[10px] text-cyan-400 tracking-widest">OPERATIVE</div>
-        <div id="hud-char" class="font-display text-base neon-cyan">—</div>
-      </div>
-      <div class="glass rounded-lg px-5 py-3 pointer-events-auto text-right">
-        <div class="text-[10px] text-cyan-400 tracking-widest">CREDS</div>
-        <div id="hud-money" class="text-2xl neon-pink">1,000</div>
-      </div>
-    </div>
+  <!-- THE GAME SCRIPT -->
+  <script>
+    // 1. Game State
+    let scene, camera, renderer, player;
+    let money = 1000;
+    let selectedChar = null;
+    let keys = {};
+    let missions = [];
+    let clock = new THREE.Clock();
 
-    <div class="absolute bottom-0 left-0 right-0 p-4 flex justify-between items-end pointer-events-none z-20">
-      <div class="glass rounded-lg px-4 py-2 pointer-events-auto hidden md:block">
-        <div class="text-[10px] text-cyan-400 tracking-widest mb-1">CONTROLS</div>
-        <div class="text-xs text-cyan-200">WASD — Move • E — Interact</div>
-      </div>
-      <div class="flex gap-2 pointer-events-auto ml-auto">
-        <button id="btn-kimi" class="glass rounded-lg px-4 py-2 text-cyan-300 hover:bg-cyan-500/20 transition text-sm">🤖 KIMI</button>
-        <button id="btn-wallet" class="glass rounded-lg px-4 py-2 text-cyan-300 hover:bg-cyan-500/20 transition text-sm">💳 WALLET</button>
-      </div>
-    </div>
+    const characters = [
+      { id: 'fixer', name: 'THE FIXER', color: '#ff3366', desc: 'Earns more from transport.' },
+      { id: 'ghost', name: 'THE GHOST', color: '#00f0ff', desc: 'Escapes police faster.' },
+      { id: 'netrunner', name: 'THE NETRUNNER', color: '#b44cff', desc: 'Unlocks hacking chores.' }
+    ];
 
-    <div id="prompt" class="absolute bottom-28 left-1/2 -translate-x-1/2 glass rounded-lg px-6 py-3 hidden z-20">
-      <span class="text-cyan-300 text-sm">Press <span class="font-display neon-cyan">E</span> — <span id="prompt-text">Interact</span></span>
-    </div>
+    // 2. UI Logic
+    setTimeout(() => {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('char-screen').classList.remove('hidden');
+      
+      const container = document.getElementById('char-container');
+      characters.forEach(char => {
+        const card = document.createElement('div');
+        card.className = 'glass p-6 rounded-xl cursor-pointer hover:scale-105 transition-transform text-center w-64';
+        card.style.borderColor = char.color;
+        card.innerHTML = `
+          <div class="w-16 h-16 rounded-full mx-auto mb-4" style="background:${char.color}; box-shadow: 0 0 20px ${char.color};"></div>
+          <h3 class="font-display text-xl mb-2" style="color:${char.color};">${char.name}</h3>
+          <p class="text-sm text-gray-300">${char.desc}</p>
+          <button class="mt-4 w-full py-2 rounded bg-black/50 border border-cyan-500 text-cyan-300">SELECT</button>
+        `;
+        card.onclick = () => startGame(char);
+        container.appendChild(card);
+      });
+    }, 1000);
 
-    <div id="notifications" class="absolute top-24 left-1/2 -translate-x-1/2 flex flex-col gap-2 items-center pointer-events-none z-30"></div>
+    // 3. Start Game
+    function startGame(char) {
+      selectedChar = char;
+      document.getElementById('char-screen').classList.add('hidden');
+      document.getElementById('game-ui').classList.remove('hidden');
+      document.getElementById('ui-char').innerText = char.name;
+      updateMoneyUI();
 
-    <div id="kimi-panel" class="absolute top-20 right-4 w-80 glass rounded-xl p-4 hidden z-30">
-      <div class="flex justify-between items-center mb-3">
-        <div class="font-display text-cyan-300 text-sm">KIMI — AI ASSISTANT</div>
-        <button id="close-kimi" class="text-cyan-400 hover:text-white">✕</button>
-      </div>
-      <div id="kimi-messages" class="h-56 overflow-y-auto text-sm text-cyan-100 space-y-2 mb-3 pr-1"></div>
-      <div class="flex gap-2">
-        <input id="kimi-input" placeholder="Ask anything..." class="flex-1 bg-black/40 border border-cyan-500/30 rounded px-3 py-2 text-sm text-cyan-100 focus:outline-none" />
-        <button id="kimi-send" class="bg-cyan-500/20 border border-cyan-400 px-3 rounded hover:bg-cyan-500/40 text-cyan-200">→</button>
-      </div>
-    </div>
+      // Setup Three.js
+      scene = new THREE.Scene();
+      scene.fog = new THREE.Fog(0x05070d, 20, 100);
+      
+      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+      
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x05070d);
+      document.body.appendChild(renderer.domElement);
 
-    <div id="wallet-panel" class="absolute top-20 right-4 w-80 glass rounded-xl p-4 hidden z-30">
-      <div class="flex justify-between items-center mb-3">
-        <div class="font-display text-cyan-300 text-sm">WALLET</div>
-        <button id="close-wallet" class="text-cyan-400 hover:text-white">✕</button>
-      </div>
-      <div class="space-y-3 text-sm">
-        <div class="flex justify-between"><span class="text-cyan-400">Creds:</span><span id="wallet-creds" class="neon-pink font-display">1,000</span></div>
-        <div class="flex justify-between"><span class="text-cyan-400">Transactions:</span><span id="wallet-tx">0</span></div>
-        <hr class="border-cyan-500/20" />
-        <input id="withdraw-amount" type="number" placeholder="Amount" class="w-full bg-black/40 border border-cyan-500/30 rounded px-3 py-2 text-sm text-cyan-100 focus:outline-none" />
-        <button id="withdraw-btn" class="w-full glow-btn bg-cyan-500/20 border border-cyan-400 py-2 rounded text-cyan-200">Request Withdrawal</button>
-        <div id="wallet-log" class="text-xs text-cyan-500 mt-2 max-h-24 overflow-y-auto"></div>
-      </div>
-    </div>
-  </div>
+      // Lights
+      scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+      const dirLight = new THREE.DirectionalLight(0x00f0ff, 1);
+      dirLight.position.set(10, 20, 10);
+      scene.add(dirLight);
 
-  <script type="module" src="./src/main.js"></script>
+      // Ground
+      const groundGeo = new THREE.PlaneGeometry(200, 200);
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x0a1220 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      scene.add(ground);
+
+      // Player
+      const playerGeo = new THREE.CylinderGeometry(0.5, 0.5, 2, 16);
+      const playerMat = new THREE.MeshStandardMaterial({ color: char.color, emissive: char.color, emissiveIntensity: 0.5 });
+      player = new THREE.Mesh(playerGeo, playerMat);
+      player.position.set(0, 1, 0);
+      scene.add(player);
+
+      // Spawn Mission Markers
+      spawnMission(10, 0);
+      spawnMission(-15, 10);
+      spawnMission(0, -20);
+
+      // Event Listeners
+      window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+      window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // Start Loop
+      animate();
+    }
+
+    // 4. Game Logic
+    function spawnMission(x, z) {
+      const geo = new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.8 });
+      const marker = new THREE.Mesh(geo, mat);
+      marker.position.set(x, 0.1, z);
+      scene.add(marker);
+      
+      const beam = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.2, 10, 8),
+        new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.2 })
+      );
+      beam.position.y = 5;
+      marker.add(beam);
+
+      missions.push(marker);
+    }
+
+    function updateMoneyUI() {
+      document.getElementById('ui-money').innerText = money.toLocaleString();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.1);
+
+      if (player) {
+        // Movement
+        const speed = keys['shift'] ? 20 : 10;
+        if (keys['w'] || keys['arrowup']) player.position.z -= speed * dt;
+        if (keys['s'] || keys['arrowdown']) player.position.z += speed * dt;
+        if (keys['a'] || keys['arrowleft']) player.position.x -= speed * dt;
+        if (keys['d'] || keys['arrowright']) player.position.x += speed * dt;
+
+        // Camera Follow
+        const targetCamPos = new THREE.Vector3(player.position.x, player.position.y + 8, player.position.z + 12);
+        camera.position.lerp(targetCamPos, 0.1);
+        camera.lookAt(player.position);
+
+        // Check Mission Collisions
+        for (let i = missions.length - 1; i >= 0; i--) {
+          const m = missions[i];
+          m.rotation.y += dt;
+          
+          const dist = player.position.distanceTo(m.position);
+          if (dist < 2) {
+            // Collect mission
+            money += 500;
+            updateMoneyUI();
+            scene.remove(m);
+            missions.splice(i, 1);
+            
+            // Spawn a new one elsewhere
+            setTimeout(() => {
+              spawnMission((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40);
+            }, 1000);
+          }
+        }
+      }
+      renderer.render(scene, camera);
+    }
+  </script>
 </body>
 </html>
